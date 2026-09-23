@@ -3,128 +3,70 @@
 > or hold explicit written authorization to assess**. Unauthorized use is
 > prohibited and may be illegal. Read [ETHICS.md](ETHICS.md) and
 > [SCOPE.md](SCOPE.md) before use. Use at your own risk; **AS IS**, no warranty.
-# H15 — SDR Signal Capture
 
-SDR signal processing, IQ data capture, and FM/AM demodulation for ESP32.
+# H15 — SDR Signal Capture & RF Forensics
 
-## Overview
+Software-defined radio toolkit: IQ baseband capture via ESP32 dual-ADC channels, AM/FM demodulation, power spectrum, signal statistics, and binary IQ export — with an offline host analysis CLI.
 
-Software-defined radio toolkit using ESP32's ADC:
-- IQ baseband capture via dual ADC channels
-- AM demodulation (envelope detection)
-- FM demodulation (arctangent discriminator)
-- Power spectrum computation
-- Binary IQ data export for external analysis
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/5h4d0wn1k/h15-sdr-capture.svg)](https://github.com/5h4d0wn1k/h15-sdr-capture)
+[![Last commit](https://img.shields.io/github/last-commit/5h4d0wn1k/h15-sdr-capture.svg)](https://github.com/5h4d0wn1k/h15-sdr-capture)
+[![Issues](https://img.shields.io/github/issues/5h4d0wn1k/h15-sdr-capture.svg)](https://github.com/5h4d0wn1k/h15-sdr-capture)
 
-## Hardware
+## Why
 
-| Component | Connection | Role |
-|-----------|------------|------|
-| ESP32 DevKit | Main board | ADC + processing |
-| IQ input I | GPIO36 (ADC1_CH0) | In-phase signal |
-| IQ input Q | GPIO39 (ADC1_CH3) | Quadrature signal |
+RF is a rich source of security signal — if you can demodulate it. H15 turns an ESP32's ADC into an IQ sampling front end (~200 kSps, 12-bit, channels I and Q), implements real AM (envelope) and FM (cross-product discriminator) demodulators, computes power spectra and statistics, and exports raw IQ for deeper analysis in GNU Octave or Python. All host-side analysis runs offline against bundled fixtures, so the DSP skills carry over to any hardware you own.
 
 ## Features
 
-- **IQ capture**: 12-bit dual ADC at ~200 kSps
-- **AM demod**: Envelope detection with DC removal and normalization
-- **FM demod**: Cross-product discriminator with moving average filter
-- **Spectrum**: ASCII bar graph of frequency bins
-- **Signal stats**: Power (dB), peak frequency offset, SNR estimation
-- **Binary export**: Raw IQ data for GNU Octave / Python analysis
+- **IQ baseband capture** — dual ADC channels (I=`GPIO36` ADC1_CH0, Q=`GPIO39` ADC1_CH3)
+- **AM demodulation** — envelope detection with DC removal and normalization
+- **FM demodulation** — arctangent cross-product discriminator with moving-average filter
+- **Power spectrum** — ASCII bar graph of frequency bins, power (dB), peak frequency offset, SNR estimate
+- **Binary IQ export** — raw samples for GNU Octave / Python analysis
+- **Offline host CLI** — `host/h15_cli.py --demo` analyzes bundled `fixtures/iq_samples.txt`
 
-## Serial Output
-
-```
-=== H15 — SDR Signal Capture ===
-IQ capture: I=GPIO36, Q=GPIO39
-
-── Spectrum ──
-  [  0] ########                              0.125
-  [  8] ################################      0.842
-  [ 16] ##########                            0.215
-  [ 24] ###                                   0.078
-
-Power:   -12.3 dB
-Peak:    1200 Hz offset
-```
-
-## Build & Flash
+## Quickstart
 
 ```bash
+# Offline host analysis (no hardware needed)
+python3 host/h15_cli.py --demo
+
+# Analyze your own IQ sample file
+python3 host/h15_cli.py --file my_samples.txt
+
+# Unit tests
+python3 -m unittest discover -s tests
+
+# Compile the ESP32 firmware (Arduino CLI)
 arduino-cli compile --fqbn esp32:esp32:esp32 firmware/
-arduino-cli upload --fqbn esp32:esp32:esp32 --port /dev/ttyUSB0 firmware/
 ```
 
-## Legal Disclaimer
+## Hardware map
 
-## IMPORTANT: Read before use.
-
-This project is provided for **educational and authorized security testing purposes only**.
-
-### Authorization Requirements
-- You MUST have explicit written permission from the network owner before using this tool
-- Unauthorized interception of network communications is illegal under federal and state laws
-- This tool should ONLY be used on networks you own or have written authorization to test
-
-### Legal Framework
-- **Computer Fraud and Abuse Act (CFAA)**: Unauthorized access to computer systems is a federal crime
-- **Wiretap Act (18 U.S.C. § 2511)**: Interception of electronic communications without consent is illegal
-- **State Laws**: Many states have additional computer crime and wiretapping statutes
-- **GDPR/CCPA**: Data collection may be subject to privacy regulations
-
-### Acceptable Use
-- Testing security of your own networks
-- Authorized penetration testing with written scope
-- Academic research in controlled lab environments
-- Security education and training
-
-### Prohibited Use
-- Intercepting communications on networks you don't own
-- Attacking infrastructure without authorization
-- Any activity that violates applicable laws or regulations
-- Commercial use without proper licensing
-
-### No Warranty
-This software is provided "AS IS" without warranty of any kind. The author is not responsible for any misuse or damage caused by this software.
-
-### Responsible Disclosure
-If you discover vulnerabilities using this tool, follow responsible disclosure practices:
-1. Report to the vendor/owner privately
-2. Allow reasonable time for remediation
-3. Do not exploit beyond proof of concept
-
-## Live Lab Test Plan
-
-Run ONLY on an isolated, authorized own-lab bench against devices, networks,
-and spectrum **you own**. No third-party callers, bystanders, or spectrum users
-may be within range of any test transmission.
-
-1. **Isolate** - Put the DUT in a shielded/Faraday enclosure or a room with no
-   third-party devices in range. Use attenuators on any transmit path.
-2. **Own devices only** - Every target (AP, remote, tag, GPS module, drone FC,
-   receiver) must be your own hardware.
-3. **Lowest power, shortest duration** - Start at minimum TX power / duty cycle
-   and use only the seconds needed.
-4. **Record** - Save before/after logs to `reports/` (git-ignored). Never
-   capture or store third-party traffic.
-5. **Cleanup** - Restore placeholder SSIDs (`lab-*`), MACs (`00:11:22:33:44:55`),
-   example.com / RFC5737 addresses, and clear any captured data from the device.
-
-> Jammer / spoofer / replay projects are **proofs for study and simulation**
-> only. They refuse live interference scenarios: a live bench trigger requires
-> the `LAB_*` allowlist environment variable AND explicit `--yes` confirmation,
-> and even then only against your own hardware in a shielded bench.
-
-## Metrics
-
-| Metric | Target | Where |
+| Component | Connection | Role |
 |---|---|---|
-| Firmware compile | `arduino-cli compile --fqbn esp32:esp32:esp32 firmware/h15_sdr_capture` PASS | CI/local |
-| Host helper | `python3 host/h15_cli.py --demo` exits 0 (offline) | host/ |
-| Unit tests | `python3 -m unittest discover -s tests` passes | tests/ |
-| py_compile | every `host/*.py` compiles clean | CI/local |
+| ESP32 DevKit | Main board | ADC + DSP |
+| IQ input I | GPIO36 (ADC1_CH0) | In-phase signal |
+| IQ input Q | GPIO39 (ADC1_CH3) | Quadrature signal |
+
+## Project structure
+
+- `firmware/h15_sdr_capture/` — ESP32 capture + demodulation firmware
+- `host/h15_cli.py` — offline IQ analysis CLI; `host/hw_common.py` — shared helpers
+- `fixtures/iq_samples.txt` — bundled sample for the demo; `tests/` — unit tests
+
+## Documentation
+
+- [ETHICS.md](ETHICS.md) — educational purpose and authorized use only
+- [SCOPE.md](SCOPE.md) — authorized-testing scope checklist
+- [SECURITY.md](SECURITY.md) — vulnerability reporting
+- [CONTRIBUTING.md](CONTRIBUTING.md) — safe contribution guidelines
+
+## Contributing
+
+New demodulators, spectrum features and fixture coverage are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md); lab work must stay on spectrum and devices you own.
 
 ## License
 
-MIT
+MIT — see [LICENSE](LICENSE). Provided **AS IS**, without warranty, for education and authorized RF / hardware security lab use only.
